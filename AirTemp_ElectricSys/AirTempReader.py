@@ -21,7 +21,9 @@ while e != ():
     else:
         e = ()
 
-#initialize plot online and get url. this contains 3 stream plots
+#initialize plot online and get url. this contains 7 stream plots
+#maxpoints=1440 which is the number of minutes per day
+#the graph will contain one day data, the data is archived as txt file on the raspberry itself
 url = py.plot([
     {    
         'x': [],
@@ -112,16 +114,19 @@ print('Press Ctrl-C to quit')
 
 while True:
 
+    #get the newest file in the logging directory (serial logging done with "cat")
     newestTfile = max(glob.iglob(os.path.join('/your/log/folder/here/Arduino',
                                               '*.txt')),
                       key=os.path.getctime)
 
+    #open the newest file, read the last line and split them at each "; "
     with open(newestTfile) as fT:
         lines = fT.readlines()
         last_row = lines[-1]
         last_row = last_row.split('; ')
-##        print last_row
 
+    #the available internet connection is weak so the actual upload process is within a try loop:
+    #if the upload fails, the program will not stop running
     try:
         streamT1.open()
         streamT2.open()
@@ -147,13 +152,13 @@ while True:
     except Exception, e:
         print "Couldn't do it: %s" % e
         pass
-
     
-
+    #loop to wait for the next minute 
     while min1 == min2:
         min2 = time.strftime('%M')
         time.sleep(5)
 
+    #wait for 45 seconds so "cat" can monitor the serial readings of the arduino and write them to a file
     min1 = time.strftime('%M')
     min2 = time.strftime('%M')
     time.sleep(45)

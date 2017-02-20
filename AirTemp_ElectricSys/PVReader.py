@@ -9,7 +9,7 @@ import glob
 import urllib2
 import re
 
-#reading file with user credentials and streaming tokens for plotly
+#reading file with user credentials and streaming tokens for plotly, repeat the login attemp until successfully completed
 e=str("Error")
 while e != ():
     try:
@@ -57,7 +57,7 @@ url = py.plot([
     }], filename = 'current flows', fileopt = 'extend')
 print "View streaming graph here: ", url
 
-#initilaze and open 2 streams online
+#initilaze and open 3 streams online
 streamIbat = py.Stream(plotly_user_config['plotly_streaming_tokens'][7])
 streamIpv = py.Stream(plotly_user_config['plotly_streaming_tokens'][8])
 streamIac = py.Stream(plotly_user_config['plotly_streaming_tokens'][9])
@@ -70,15 +70,20 @@ print('Press Ctrl-C to quit')
 
 while True:
 
+    #get the newest file in logging directory
+    #the acutal measurement is done with a Steca Tarom 4545 which is connect via serial USB connection and logged with "cat"
     newestIfile = max(glob.iglob(os.path.join('/your/tarom/directory',
                                               '*.txt')),
                       key=os.path.getctime)
 
+    #read the last line within the file and split the content at each ";"
     with open(newestIfile) as fI:
         lines = fI.readlines()
         last_row = lines[-2]
         last_row = last_row.split(';')
 
+    #open the youless energy monitor (attached to electricity counter) within the local network,
+    #read the content of the webpage, split the content each new line, each tab and each space and read the second last entry
     youless = 'http://192.168.0.14/V?h=1'
     response = urllib2.urlopen(youless)
     webcontent = response.read()
@@ -86,6 +91,7 @@ while True:
     l = len(webcontent)
     P_ac = float(webcontent[l-2])
 
+    #get the charging power of the charge controller and the used power from the PV field by multiplying current and voltage from the serial connected charge controller
     P_bat = float(last_row[8])*float(last_row[3])
     P_pv = float(last_row[9])*float(last_row[4])
     
@@ -107,6 +113,7 @@ while True:
         min2 = time.strftime('%M')
         time.sleep(5)
 
+    #wait for 45 seconds after a minute has passed so that serial monitoring shell script has engough time to read the charge controller
     min1 = time.strftime('%M')
     min2 = time.strftime('%M')
     time.sleep(45)
